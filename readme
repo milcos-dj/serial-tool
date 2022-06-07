@@ -1,0 +1,9 @@
+# arm平台编译
+go env -w GOOS=linux
+go env -w GOARCH=arm
+go env -w GOARM=7
+
+
+# windows平台编译
+go env -w GOOS=windows
+go env -w GOARCH=amd64
