@@ -18,8 +18,11 @@ type Config struct {
 	DataSize int
 }
 
-//export StartPort
-func StartPort(cnf *Config) {
+
+var writePort *serial.Port
+
+
+func OpenPort(cnf *Config) (*serial.Port, error) {
 	conf := &serial.Config{
 		Name: cnf.Name,
 		Baud: cnf.Baud,
@@ -28,13 +31,40 @@ func StartPort(cnf *Config) {
 		StopBits: getStopBit(cnf.StopBits),
 	}
 
-	port, err := serial.OpenPort(conf)
+	return serial.OpenPort(conf)
+
+}
+
+
+//export StartReadPort
+func StartReadPort(cnf *Config) {
+	port, err := OpenPort(cnf)
 	if err != nil {
 		log.Panic("serial open port error!")
 	}
 	readData(port, cnf)
 }
 
+
+//export StartReadPort
+func StartWritePort(cnf *Config) {
+	writePort, _ = OpenPort(cnf)
+	//if err != nil {
+	//	log.Panic("serial open port error!")
+	//}
+	//go func() {
+	//	for {
+	//		time.Sleep(time.Millisecond * 100)
+	//		if buf == nil {
+	//			continue
+	//		}
+	//		writePort.Write(buf)
+	//		log.Println("write", buf)
+	//
+	//	}
+	//}()
+
+}
 
 func getParity(parity int) serial.Parity{
 	var p = serial.ParityNone
@@ -64,11 +94,14 @@ func readData(port *serial.Port, cnf *Config) {
 	r := bufio.NewReaderSize(port, 1024)
 	defer port.Close()
 	for {
-		var buf []byte
-		buf = make([]byte, cnf.DataSize)
+
+		var buf = make([]byte, cnf.DataSize)
 		//port.Read(buf)
 		io.ReadFull(r, buf)
 		log.Println(buf)
+		if writePort != nil {
+			writePort.Write(buf)
+		}
 	}
 
 }
@@ -80,6 +113,7 @@ var Stop = flag.Int("s", 0, "停止位")
 var ParityNone = flag.Int("p", 0, "校验位")
 var DataBits = flag.Int("d", 8, "数据位")
 var DataSize = flag.Int("t", 12, "每帧数据包大小")
+var WriteName = flag.String("wn", "", "写数据串口号")
 
 
 func main(){
@@ -89,6 +123,21 @@ func main(){
 		flag.Usage()
 		return
 	}
+
+	if *WriteName != "" {
+		var writeCnf = &Config{
+			Name:     *WriteName,
+			Baud:     *Baud,
+			StopBits: *Stop,
+			Parity:   *ParityNone,
+			DataBits: byte(*DataBits),
+			DataSize:     *DataSize,
+		}
+		fmt.Println(writeCnf)
+		StartWritePort(writeCnf)
+	}
+
+
 	var cnf = &Config{
 		Name:     *Name,
 		Baud:     *Baud,
@@ -97,9 +146,7 @@ func main(){
 		DataBits: byte(*DataBits),
 		DataSize:     *DataSize,
 	}
-	fmt.Println(*Name)
-	fmt.Println(*Baud)
 	fmt.Println(cnf)
-	StartPort(cnf)
+	StartReadPort(cnf)
 
 }
