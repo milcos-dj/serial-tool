@@ -7,6 +7,7 @@ import (
 	"github.com/tarm/serial"
 	"io"
 	"log"
+	"time"
 )
 
 type Config struct {
@@ -46,9 +47,17 @@ func StartReadPort(cnf *Config) {
 }
 
 
-//export StartReadPort
+//export StartWritePort
 func StartWritePort(cnf *Config) {
 	writePort, _ = OpenPort(cnf)
+	if *WriteTest {
+		for {
+			buf := []byte{1,2,3,4,5,6,7,8,9,10,11,12}
+			log.Println(buf)
+			writePort.Write(buf)
+			time.Sleep(time.Second * 3)
+		}
+	}
 	//if err != nil {
 	//	log.Panic("serial open port error!")
 	//}
@@ -98,8 +107,9 @@ func readData(port *serial.Port, cnf *Config) {
 		var buf = make([]byte, cnf.DataSize)
 		//port.Read(buf)
 		io.ReadFull(r, buf)
-		log.Println(buf)
+		log.Println("read: " + string(buf))
 		if writePort != nil {
+			log.Println("write: " + string(buf))
 			writePort.Write(buf)
 		}
 	}
@@ -107,13 +117,14 @@ func readData(port *serial.Port, cnf *Config) {
 }
 
 var Help = flag.Bool("h", false, "帮助指令")
-var Name = flag.String("n", "COM3", "串口号")
+var Name = flag.String("n", "", "串口号, eg:COM3,/dev/ttymxc1")
 var Baud = flag.Int("b", 9600, "波特率")
 var Stop = flag.Int("s", 0, "停止位")
 var ParityNone = flag.Int("p", 0, "校验位")
 var DataBits = flag.Int("d", 8, "数据位")
 var DataSize = flag.Int("t", 12, "每帧数据包大小")
 var WriteName = flag.String("wn", "", "写数据串口号")
+var WriteTest = flag.Bool("wt", false, "写数据串口号")
 
 
 func main(){
@@ -138,15 +149,17 @@ func main(){
 	}
 
 
-	var cnf = &Config{
-		Name:     *Name,
-		Baud:     *Baud,
-		StopBits: *Stop,
-		Parity:   *ParityNone,
-		DataBits: byte(*DataBits),
-		DataSize:     *DataSize,
+	if *Name != "" {
+		var cnf = &Config{
+			Name:     *Name,
+			Baud:     *Baud,
+			StopBits: *Stop,
+			Parity:   *ParityNone,
+			DataBits: byte(*DataBits),
+			DataSize:     *DataSize,
+		}
+		fmt.Println(cnf)
+		StartReadPort(cnf)
 	}
-	fmt.Println(cnf)
-	StartReadPort(cnf)
 
 }
