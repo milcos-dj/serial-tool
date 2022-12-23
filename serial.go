@@ -11,31 +11,27 @@ import (
 )
 
 type Config struct {
-	Name string
-	Baud int
+	Name     string
+	Baud     int
 	DataBits byte
-	Parity int
+	Parity   int
 	StopBits int
 	DataSize int
 }
 
-
 var writePort *serial.Port
-
 
 func OpenPort(cnf *Config) (*serial.Port, error) {
 	conf := &serial.Config{
-		Name: cnf.Name,
-		Baud: cnf.Baud,
-		Size: cnf.DataBits,
-		Parity: getParity(cnf.Parity),
+		Name:     cnf.Name,
+		Baud:     cnf.Baud,
+		Size:     cnf.DataBits,
+		Parity:   getParity(cnf.Parity),
 		StopBits: getStopBit(cnf.StopBits),
 	}
-
 	return serial.OpenPort(conf)
 
 }
-
 
 //export StartReadPort
 func StartReadPort(cnf *Config) {
@@ -46,13 +42,12 @@ func StartReadPort(cnf *Config) {
 	readData(port, cnf)
 }
 
-
 //export StartWritePort
 func StartWritePort(cnf *Config) {
 	writePort, _ = OpenPort(cnf)
 	if *WriteTest {
 		for {
-			buf := []byte{1,2,3,4,5,6,7,8,9,10,11,12}
+			buf := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 			log.Println(buf)
 			writePort.Write(buf)
 			time.Sleep(time.Second * 3)
@@ -75,7 +70,7 @@ func StartWritePort(cnf *Config) {
 
 }
 
-func getParity(parity int) serial.Parity{
+func getParity(parity int) serial.Parity {
 	var p = serial.ParityNone
 	if parity == 1 {
 		p = serial.ParityOdd
@@ -89,7 +84,7 @@ func getParity(parity int) serial.Parity{
 	return p
 }
 
-func getStopBit(stopBit int) serial.StopBits{
+func getStopBit(stopBit int) serial.StopBits {
 	var p = serial.Stop1
 	if stopBit == 1 {
 		p = serial.Stop1Half
@@ -108,6 +103,7 @@ func readData(port *serial.Port, cnf *Config) {
 		//port.Read(buf)
 		io.ReadFull(r, buf)
 		log.Println("read: " + string(buf))
+		log.Println(buf)
 		if writePort != nil {
 			log.Println("write: " + string(buf))
 			writePort.Write(buf)
@@ -117,7 +113,7 @@ func readData(port *serial.Port, cnf *Config) {
 }
 
 var Help = flag.Bool("h", false, "帮助指令")
-var Name = flag.String("n", "", "串口号, eg:COM3,/dev/ttymxc1")
+var Name = flag.String("n", "/dev/ttymxc1", "串口号, eg:COM3,/dev/ttymxc1")
 var Baud = flag.Int("b", 9600, "波特率")
 var Stop = flag.Int("s", 0, "停止位")
 var ParityNone = flag.Int("p", 0, "校验位")
@@ -126,8 +122,7 @@ var DataSize = flag.Int("t", 12, "每帧数据包大小")
 var WriteName = flag.String("wn", "", "写数据串口号")
 var WriteTest = flag.Bool("wt", false, "写数据串口号")
 
-
-func main(){
+func main() {
 
 	flag.Parse()
 	if *Help {
@@ -142,12 +137,11 @@ func main(){
 			StopBits: *Stop,
 			Parity:   *ParityNone,
 			DataBits: byte(*DataBits),
-			DataSize:     *DataSize,
+			DataSize: *DataSize,
 		}
 		fmt.Println(writeCnf)
 		StartWritePort(writeCnf)
 	}
-
 
 	if *Name != "" {
 		var cnf = &Config{
@@ -156,7 +150,7 @@ func main(){
 			StopBits: *Stop,
 			Parity:   *ParityNone,
 			DataBits: byte(*DataBits),
-			DataSize:     *DataSize,
+			DataSize: *DataSize,
 		}
 		fmt.Println(cnf)
 		StartReadPort(cnf)

@@ -4,6 +4,11 @@ go env -w GOARCH=arm
 go env -w GOARM=7
 
 
+go env -w GOOS=linux GOARCH=arm GOARM=7
+
 # windows平台编译
 go env -w GOOS=windows
 go env -w GOARCH=amd64
+
+
+go env -w GOOS=windows GOARCH=amd64
