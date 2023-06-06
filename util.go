@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func GetLocalIp() string {
+func GetLocalIp1() string {
 	inters, err := net.Interfaces()
 	if err != nil {
 		return ""

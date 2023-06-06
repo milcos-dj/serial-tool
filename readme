@@ -12,3 +12,7 @@ go env -w GOARCH=amd64
 
 
 go env -w GOOS=windows GOARCH=amd64
+
+
+
+go build -o serial serial.go
