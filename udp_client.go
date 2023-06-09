@@ -1,81 +1,84 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net"
-	"strings"
-	"time"
+	"os"
 )
 
-var UdpClientHelp = flag.Bool("h", false, "帮助指令")
-var InterfaceName = flag.String("in", "eno1", "网卡名称")
+var ipMap = make(map[string]int)
 
 func main() {
-	flag.Parse()
-	if *UdpClientHelp {
-		flag.Usage()
-		return
-	}
-	for {
-		err := startClient()
-		if err != nil {
-			continue
-		}
-		time.Sleep(time.Second * 10)
-	}
+
+	done := make(chan struct{})
+	go startClient(done)
+
+	<-done
 }
 
-func startClient() error {
+func startClient(done chan struct{}) {
+
 	laddr := &net.UDPAddr{
-		IP: net.ParseIP(GetLocalIp()),
+		IP:   net.ParseIP("192.168.8.104"),
+		Port: 10002,
 	}
 	raddr := &net.UDPAddr{
 		IP:   net.IPv4(255, 255, 255, 255),
 		Port: 10001,
 	}
-	conn, err := net.DialUDP("udp", laddr, raddr)
+	conn, err := net.ListenUDP("udp4", laddr)
 	if err != nil {
-		return err
+		done <- struct{}{}
+		return
+	}
+	if err != nil {
+		done <- struct{}{}
+		return
 	}
 	defer func() {
 		err := conn.Close()
 		if err != nil {
-			fmt.Println("")
+			fmt.Println("", err)
 		}
 	}()
-	_, err = conn.Write([]byte("ping"))
-	fmt.Println("write ping message")
-	if err != nil {
-		return err
-	}
-	return err
+	go writePing(conn, raddr)
+	readResp(conn)
 }
-func GetLocalIp() string {
-	inters, err := net.Interfaces()
-	if err != nil {
-		return ""
-	}
-	laddr := &net.UDPAddr{}
-	for _, inter := range inters {
-		fmt.Printf("addr name is : %v \n", inter.Name)
-		if strings.Compare(inter.Name, *InterfaceName) == 0 {
-			addrs, err := inter.Addrs()
-			if err != nil {
-				continue
-			}
-			for _, addr := range addrs {
-				if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-					//判断是否存在IPV4 IP 如果没有过滤
-					ip := ipnet.IP.To4()
-					if ip != nil {
-						fmt.Printf("addr name s%, ip is %s \n", inter.Name, ip.String())
-						laddr.IP = net.ParseIP(ip.String())
-						return ip.String()
-					}
-				}
-			}
+
+func writePing(conn *net.UDPConn, raddr *net.UDPAddr) {
+	for {
+		var cmd string
+		fmt.Print("请输入:")
+		_, e := fmt.Scanf("%s", &cmd)
+		if e != nil {
+			fmt.Println("Scanf error:", e.Error())
+			os.Exit(1)
 		}
+		if cmd == "s" {
+			ipMap = make(map[string]int)
+			_, err := conn.WriteToUDP([]byte(cmd), raddr)
+			fmt.Println("WriteToUDP ping message")
+			if err != nil {
+				fmt.Printf("write ping message error: %v\n", err)
+			}
+		} else if cmd == "a" {
+			fmt.Printf("get all device id:%v\n", ipMap)
+		}
+
+		_, _ = fmt.Scanln()
 	}
-	return ""
+}
+
+func readResp(conn *net.UDPConn) {
+	for {
+		buf := make([]byte, 10)
+		n, addr, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			fmt.Println("ReadFromUDP error:", err)
+			return
+		}
+		ipMap[addr.IP.String()] = addr.Port
+		data := string(buf[0:n])
+		fmt.Printf("receive message %s from %v\n", data, addr)
+	}
 }
