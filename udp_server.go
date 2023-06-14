@@ -8,6 +8,7 @@ import (
 
 func main() {
 	startServer()
+	//GetLocalIp("以太网")
 }
 
 func startServer() {
